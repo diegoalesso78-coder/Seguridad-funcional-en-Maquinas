@@ -1,6 +1,6 @@
 {
-  "name": "RiskOS - Gestión de Riesgos Industriales",
-  "description": "Plataforma avanzada para la evaluación de riesgos en máquinas basada en ISO 12100, ISO 13849 y NR-12.",
+  "name": "RiskOS",
+  "description": "Gestión de la Seguridad Funcional de Máquinas",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

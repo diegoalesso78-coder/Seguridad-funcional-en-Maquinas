@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { uid, calcPHR, getRisk, getRiskLabel, getSFP, getPLr, pct } from "../lib/utils";
+import { uid, calcPHR, getRisk, getRiskLabel, getSFP, getPLr, pct, getMaxPLr } from "../lib/utils";
 import { C, RFQ, NR12, PHASE_META, STATUS_CFG } from "../lib/constants";
 import { RiskBadge, GaugePHR } from "./RiskIndicators";
 import { KanbanBoard } from "./DashElements";
@@ -61,15 +61,15 @@ export function EvaluationWizard({ project, evalId, onSave, onBack }: { project:
 
   const steps = [
     { n: 1, label: "Alcance", icon: <LayoutGrid size={18} /> },
-    { n: 2, label: "Hallazgos", icon: <AlertTriangle size={18} /> },
-    { n: 3, label: "Checklist", icon: <FileCheck size={18} />, hidden: ev.projectSetup?.isMachineInUse },
+    { n: 2, label: "Checklist", icon: <FileCheck size={18} />, hidden: ev.projectSetup?.isMachineInUse },
+    { n: 3, label: "Hallazgos", icon: <AlertTriangle size={18} /> },
     { n: 4, label: "Resumen", icon: <BarChart3 size={18} /> },
   ].filter(s => !s.hidden);
 
   const handleNext = () => {
     setStep(s => {
       let next = s + 1;
-      if (next === 3 && ev.projectSetup?.isMachineInUse) next = 4;
+      if (next === 2 && ev.projectSetup?.isMachineInUse) next = 3;
       return Math.min(next, 4);
     });
   };
@@ -77,7 +77,7 @@ export function EvaluationWizard({ project, evalId, onSave, onBack }: { project:
   const handlePrev = () => {
     setStep(s => {
       let prev = s - 1;
-      if (prev === 3 && ev.projectSetup?.isMachineInUse) prev = 2;
+      if (prev === 2 && ev.projectSetup?.isMachineInUse) prev = 1;
       return Math.max(prev, 1);
     });
   };
@@ -160,7 +160,8 @@ export function EvaluationWizard({ project, evalId, onSave, onBack }: { project:
             transition={{ duration: 0.2 }}
           >
             {step === 1 && <Step1 ev={ev} setEv={updateEv} isRO={isRO} project={project} />}
-            {step === 2 && (
+            {step === 2 && <Step3 ev={ev} setEv={updateEv} isRO={isRO} isDesign={isDesign} />}
+            {step === 3 && (
               <Step2 
                 ev={ev} 
                 setEv={updateEv} 
@@ -173,7 +174,6 @@ export function EvaluationWizard({ project, evalId, onSave, onBack }: { project:
                 onCancel={() => { setShowFindingForm(false); setEditingFinding(null); }}
               />
             )}
-            {step === 3 && <Step3 ev={ev} setEv={updateEv} isRO={isRO} isDesign={isDesign} />}
             {step === 4 && <Step4 ev={ev} project={project} />}
           </motion.div>
         </AnimatePresence>
@@ -621,6 +621,7 @@ function Step3({ ev, setEv, isRO, isDesign }: any) {
 function Step4({ ev, project }: any) {
   const findings = ev.findings || [];
   const maxPHR = findings.length ? Math.max(...findings.map((f: any) => f.phr)) : 0;
+  const maxPLr = getMaxPLr(findings);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -631,7 +632,7 @@ function Step4({ ev, project }: any) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center">
-          <GaugePHR phr={maxPHR} label="PHR Máximo" size={220} />
+          <GaugePHR phr={maxPHR} label="PHR Máximo" size={220} plr={maxPLr !== "-" ? maxPLr : undefined} />
         </div>
         
         <div className="space-y-4">

@@ -50,9 +50,10 @@ interface GaugePHRProps {
   phr: number;
   label?: string;
   size?: number;
+  plr?: string;
 }
 
-export function GaugePHR({ phr = 0, label = "PHR Máximo", size = 200 }: GaugePHRProps) {
+export function GaugePHR({ phr = 0, label = "PHR Máximo", size = 200, plr }: GaugePHRProps) {
   const SCALE_MAX = 2000;
   const pct = Math.min(Math.max(phr / SCALE_MAX, 0), 1);
   const r = getRisk(phr);
@@ -97,7 +98,8 @@ export function GaugePHR({ phr = 0, label = "PHR Máximo", size = 200 }: GaugePH
           {phr ? getRiskLabel(phr) : "SIN DATOS"}
         </text>
       </svg>
-      <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1 font-sans">{label}</div>
+      <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mt-1 font-sans">{label}</div>
+      {plr && <div className="text-xs font-black text-amber-600 mt-0.5 bg-amber-50 dark:bg-amber-950/30 inline-block px-2 py-0.5 rounded-lg border border-amber-200/50">PLr Requerido: {plr.toUpperCase()}</div>}
     </div>
   );
 }

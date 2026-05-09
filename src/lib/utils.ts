@@ -61,6 +61,20 @@ export const getPLr = (sev: string, freq: string, prob: string) => {
   return "e";
 };
 
+export const getMaxPLr = (findings: any[]) => {
+  if (!findings || findings.length === 0) return "-";
+  let highest = "a";
+  const levels = ["a", "b", "c", "d", "e"];
+  for (const f of findings) {
+    const sfp = getSFP(f.dph, f.po, f.pa, f.fe);
+    const plr = getPLr(sfp.sev, sfp.freq, sfp.prob);
+    if (levels.indexOf(plr) > levels.indexOf(highest)) {
+      highest = plr;
+    }
+  }
+  return highest;
+};
+
 export const DPH_OPTIONS = [
   { v: 0.25, l: "0.25 — Rasguño/escoriación" },
   { v: 0.5, l: "0.5 — Corte/enfermedad/quemadura leve" },

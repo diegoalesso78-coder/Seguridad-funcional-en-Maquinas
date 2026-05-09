@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Plus, Search, Filter, ClipboardList, Settings, MoreVertical, Trash2 } from "lucide-react";
 import { TYPE_META } from "../lib/constants";
 import { GaugePHR } from "./RiskIndicators";
+import { getMaxPLr } from "../lib/utils";
 
 export function ProjectDashboard({ projects, onSelect, onNew, onDeleteProject }: { projects: any[]; onSelect: any; onNew: any; onDeleteProject?: any }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -111,6 +112,7 @@ export function ProjectDashboard({ projects, onSelect, onNew, onDeleteProject }:
             const last = p.evaluations[p.evaluations.length - 1];
             const findings = last ? last.findings : [];
             const maxPHR = findings.length ? Math.max(...findings.map((f: any) => f.phr)) : 0;
+            const maxPLr = getMaxPLr(findings);
 
             return (
               <motion.div
@@ -156,9 +158,9 @@ export function ProjectDashboard({ projects, onSelect, onNew, onDeleteProject }:
 
                 <div className="flex items-end justify-between pt-6 border-t border-zinc-100 dark:border-zinc-800">
                   <div className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">PHR Máximo</span>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Criticidad Máxima</span>
                     <div className="flex items-center gap-3">
-                       <GaugePHR phr={maxPHR} label="" size={100} />
+                       <GaugePHR phr={maxPHR} label="" size={100} plr={maxPLr !== "-" ? maxPLr : undefined} />
                     </div>
                   </div>
                   <div className="text-right">

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { X, Sparkles, HelpCircle, ShieldCheck } from "lucide-react";
-import { calcPHR, getRiskLabel, DPH_OPTIONS, PO_OPTIONS, PA_OPTIONS, FE_OPTIONS, uid } from "../lib/utils";
+import { X, Sparkles, HelpCircle, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { calcPHR, getRiskLabel, DPH_OPTIONS, PO_OPTIONS, PA_OPTIONS, FE_OPTIONS, uid, getSFP, getPLr } from "../lib/utils";
 import { GaugePHR } from "./RiskIndicators";
 import { askAria } from "../services/aiService";
 
@@ -35,6 +35,14 @@ export function FindingForm({ initial, onSave, onCancel }: { initial?: any; onSa
     pa: 2.5,
     fe: 3,
     norms: [],
+    // Jerarquía de Controles
+    ctrlElimination: "",
+    ctrlSubstitution: "",
+    ctrlEngineering: "",
+    ctrlAdmin: "",
+    ctrlPPE: "",
+    safetyFunctions: "",
+    // Fallback original mitigation text
     mitigation: "",
     status: "PENDIENTE",
     
@@ -51,22 +59,32 @@ export function FindingForm({ initial, onSave, onCancel }: { initial?: any; onSa
   const phr = calcPHR(f.dph, f.po, f.pa, f.fe);
   const label = getRiskLabel(phr);
   
+  const sfp = getSFP(f.dph, f.po, f.pa, f.fe);
+  const currentPLr = getPLr(sfp.sev, sfp.freq, sfp.prob);
+
   const rphr = f.hasResidual ? calcPHR(f.rdph, f.rpo, f.rpa, f.rfe) : null;
   const rlabel = f.hasResidual ? getRiskLabel(rphr!) : null;
 
   const update = (key: string, val: any) => setF({ ...f, [key]: val });
 
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showHierarchy, setShowHierarchy] = useState(true);
 
   const aiAssist = async () => {
     if (!f.title) return;
     setIsAiLoading(true);
     try {
-      const prompt = `Como experto en ISO 12100, sugiere 3 medidas técnicas de reducción de riesgo para el siguiente peligro: "${f.title}" (${f.taskType}) ubicado en "${f.location}". Usa la jerarquía de: 1. Diseño seguro, 2. Protecciones, 3. Información.`;
+      const prompt = `Como experto en ISO 12100 y seguridad de máquinas, sugiere la jerarquía de control para este peligro: "${f.title}" (${f.taskType}) ubicado en "${f.location}". Devuelve la respuesta en formato JSON estricto con estas claves: ctrlElimination, ctrlSubstitution, ctrlEngineering, safetyFunctions, ctrlAdmin, ctrlPPE. Si algo no aplica, deja el string en "". Para las safetyFunctions, detalla el tipo de funciones SRP/CS necesarias. NO agregues ni texto ni markdown fuera del JSON.`;
       const res = await askAria(prompt);
-      update("mitigation", res);
+      const cleaned = res.replace(/```json/g, "").replace(/```/g, "").trim();
+      const aiData = JSON.parse(cleaned);
+      setF({ ...f, ...aiData, mitigation: res }); // maintain mitigation just in case
     } catch (e) {
       console.error(e);
+      // Fallback si la IA no devuelve JSON
+      const prompt = `Como experto en ISO 12100, sugiere medidas técnicas de reducción de riesgo para el siguiente peligro: "${f.title}" (${f.taskType}).`;
+      const res2 = await askAria(prompt);
+      update("mitigation", res2);
     } finally {
       setIsAiLoading(false);
     }
@@ -237,21 +255,63 @@ export function FindingForm({ initial, onSave, onCancel }: { initial?: any; onSa
 
               <div>
                 <div className="flex justify-between items-center mb-2 mt-4">
-                  <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest block">Disminución de Riesgo</label>
+                  <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-widest block">Jerarquía de Control de Riesgos</label>
                   <button 
                     onClick={aiAssist}
                     disabled={isAiLoading || !f.title}
                     className="flex items-center gap-1.5 text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-950/30 px-2 py-1 rounded-lg hover:bg-amber-100 transition-colors disabled:opacity-50"
                   >
-                    <Sparkles size={10} className={isAiLoading ? "animate-spin" : ""} /> {isAiLoading ? "Pensando..." : "AI Sugerir"}
+                    <Sparkles size={10} className={isAiLoading ? "animate-spin" : ""} /> {isAiLoading ? "Pensando..." : "AI Completar"}
                   </button>
                 </div>
-                <textarea 
-                  value={f.mitigation}
-                  onChange={(e) => update("mitigation", e.target.value)}
-                  placeholder="Descripción de protecciones técnicas requeridas..."
-                  className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-32 resize-none"
-                />
+                
+                <div className="space-y-3">
+                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl overflow-hidden">
+                    <button onClick={() => setShowHierarchy(!showHierarchy)} className="w-full flex justify-between items-center p-4 bg-white dark:bg-zinc-900/50 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                      <span className="text-[12px] font-bold text-zinc-700 dark:text-zinc-300">Medidas de Control Recomendadas</span>
+                      {showHierarchy ? <ChevronUp size={16} className="text-zinc-400" /> : <ChevronDown size={16} className="text-zinc-400" />}
+                    </button>
+                    {showHierarchy && (
+                      <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 block">1. Eliminación</label>
+                          <textarea value={f.ctrlElimination} onChange={(e) => update("ctrlElimination", e.target.value)} placeholder="Ej: Remover el proceso peligroso" className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 block">2. Sustitución</label>
+                          <textarea value={f.ctrlSubstitution} onChange={(e) => update("ctrlSubstitution", e.target.value)} placeholder="Ej: Reemplazar el material por uno menos nocivo" className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none" />
+                        </div>
+                        <div className="p-3 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl">
+                          <label className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest mb-1.5 block">3. Medidas de Ingeniería</label>
+                          <textarea value={f.ctrlEngineering} onChange={(e) => update("ctrlEngineering", e.target.value)} placeholder="Ej: Guardas fijas, cortinas de luz..." className="w-full bg-white dark:bg-zinc-950 border border-amber-100 dark:border-amber-900/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none mb-3" />
+                          <label className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest mb-1.5 block">Funciones de Seguridad (SRP/CS) - Requerimiento PLr: {currentPLr.toUpperCase()}</label>
+                          <textarea value={f.safetyFunctions} onChange={(e) => update("safetyFunctions", e.target.value)} placeholder="Ej: SF1: Parada segura por cortina óptica (PLr: d)" className="w-full bg-white dark:bg-zinc-950 border border-amber-100 dark:border-amber-900/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 block">4. Controles Administrativos</label>
+                          <textarea value={f.ctrlAdmin} onChange={(e) => update("ctrlAdmin", e.target.value)} placeholder="Ej: Capacitación, señalización..." className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 block">5. Equipo de Protección Personal (EPP)</label>
+                          <textarea value={f.ctrlPPE} onChange={(e) => update("ctrlPPE", e.target.value)} placeholder="Ej: Guantes anticorte, gafas de seguridad..." className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-16 resize-none" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Fallback original text field directly below if needed, or we hide it. For now, let's keep it visible in case they use AI fallback */}
+                  {f.mitigation && (
+                    <div>
+                      <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1.5 block">Resumen / Notas adicionales</label>
+                      <textarea 
+                        value={f.mitigation}
+                        onChange={(e) => update("mitigation", e.target.value)}
+                        placeholder="Descripción de protecciones técnicas requeridas..."
+                        className="w-full bg-zinc-50 dark:bg-zinc-900 border-none rounded-2xl p-4 text-sm focus:ring-2 focus:ring-amber-500 outline-none h-24 resize-none"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -264,7 +324,7 @@ export function FindingForm({ initial, onSave, onCancel }: { initial?: any; onSa
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Cálculo de Criticidad Inicial</span>
               </div>
               
-              <GaugePHR phr={phr} label="Resultado PHR Inicial" size={180} />
+              <GaugePHR phr={phr} label="Resultado PHR Inicial" size={180} plr={currentPLr} />
 
               <div className="grid grid-cols-2 gap-x-4 gap-y-3 w-full mt-6">
                 {[

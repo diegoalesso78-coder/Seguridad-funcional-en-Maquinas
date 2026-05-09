@@ -151,7 +151,7 @@ export default function App() {
                   RiskOS <span className="text-[10px] text-zinc-400 font-bold">V5</span>
                 </div>
                 <div className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest leading-none">
-                  ISO 12100 Management
+                  Gestión de la Seguridad Funcional de Máquinas
                 </div>
               </div>
             </div>
