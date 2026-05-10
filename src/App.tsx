@@ -234,12 +234,10 @@ export default function App() {
       )}
 
       {/* Global AI Assistant */}
-      {selectedProject && (
-        <ARIAAgent 
-          project={selectedProject}
-          findings={selectedProject.evaluations.flatMap((e: any) => e.findings || [])}
-        />
-      )}
+      <ARIAAgent 
+        project={selectedProject || { name: "Dashboard General" }}
+        findings={selectedProject ? selectedProject.evaluations.flatMap((e: any) => e.findings || []) : []}
+      />
     </div>
   );
 }

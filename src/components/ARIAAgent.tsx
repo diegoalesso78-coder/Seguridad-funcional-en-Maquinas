@@ -20,7 +20,7 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [attachedFile, setAttachedFile] = useState<{name: string, data: string, mimeType: string} | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<{name: string, data: string, mimeType: string}[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const quickPrompts = [
@@ -38,17 +38,17 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
 
   const handleSend = async (text?: string) => {
     const q = text || input.trim();
-    if (!q && !attachedFile) return;
+    if (!q && attachedFiles.length === 0) return;
     if (isLoading) return;
 
     setInput("");
     
     // Add user message to UI
     let userMsgContent = q;
-    if (attachedFile && !text) { // only attach if not coming from quick prompt
-      userMsgContent = `📎 ${attachedFile.name}\n${q}`;
+    if (attachedFiles.length > 0 && !text) { // only attach if not coming from quick prompt
+      userMsgContent = attachedFiles.map(f => `📎 ${f.name}`).join('\n') + `\n${q}`;
     }
-    setMessages(prev => [...prev, { role: "user", content: userMsgContent || "Analiza el documento adjunto." }]);
+    setMessages(prev => [...prev, { role: "user", content: userMsgContent || "Analiza los documentos adjuntos." }]);
     setIsLoading(true);
 
     const context = `
@@ -57,10 +57,10 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
       PHR máximo: ${findings.length ? Math.max(...findings.map(f => f.phr)) : 0}
     `;
 
-    const fileToPass = text ? undefined : attachedFile;
-    if (!text && attachedFile) setAttachedFile(null); // Clear after sending
+    const filesToPass = text ? undefined : attachedFiles;
+    if (!text && attachedFiles.length > 0) setAttachedFiles([]); // Clear after sending
 
-    const response = await askAria(q || "Analiza el documento y dame un resumen, salvo que pida otra cosa.", context, messages, fileToPass ? { ...fileToPass, filename: fileToPass.name } : undefined);
+    const response = await askAria(q || "Analiza el documento y dame un resumen, salvo que pida otra cosa.", context, messages, filesToPass?.map(f => ({ ...f, filename: f.name })));
     setMessages(prev => [...prev, { role: "assistant", content: response }]);
     setIsLoading(false);
   };
@@ -152,13 +152,17 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
 
             {/* Input */}
             <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">
-              {attachedFile && (
-                <div className="mb-2 flex items-center gap-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 py-1.5 px-3 rounded-lg text-xs font-medium w-fit border border-amber-200/50 dark:border-amber-800/50">
-                  <Paperclip size={12} />
-                  <span className="truncate max-w-[150px]">{attachedFile.name}</span>
-                  <button onClick={() => setAttachedFile(null)} className="hover:bg-amber-200/50 dark:hover:bg-amber-800/50 rounded-full p-0.5 ml-1">
-                    <X size={12} />
-                  </button>
+              {attachedFiles.length > 0 && (
+                <div className="mb-2 flex flex-wrap gap-2">
+                  {attachedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-500 py-1 px-2 rounded-lg text-xs font-medium border border-amber-200/50 dark:border-amber-800/50">
+                      <Paperclip size={10} />
+                      <span className="truncate max-w-[100px]">{file.name}</span>
+                      <button onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))} className="hover:bg-amber-200/50 dark:hover:bg-amber-800/50 rounded-full p-0.5 ml-1">
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
               <div className="relative flex items-center">
@@ -167,22 +171,25 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
                   ref={fileInputRef} 
                   className="hidden" 
                   accept="application/pdf,.pdf" 
+                  multiple
                   onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const reader = new FileReader();
-                        reader.readAsDataURL(file);
-                        reader.onload = () => {
-                          const base64 = (reader.result as string).split(',')[1];
-                          setAttachedFile({
-                            name: file.name,
-                            mimeType: file.type || 'application/pdf',
-                            data: base64
-                          });
-                        };
-                      } catch (err) {
-                        console.error('Error reading file:', err);
+                    const files = Array.from(e.target.files || []);
+                    if (files.length > 0) {
+                      for (const file of files) {
+                        try {
+                          const reader = new FileReader();
+                          reader.readAsDataURL(file);
+                          reader.onload = () => {
+                            const base64 = (reader.result as string).split(',')[1];
+                            setAttachedFiles(prev => [...prev, {
+                              name: file.name,
+                              mimeType: file.type || 'application/pdf',
+                              data: base64
+                            }]);
+                          };
+                        } catch (err) {
+                          console.error('Error reading file:', err);
+                        }
                       }
                     }
                     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -209,9 +216,9 @@ export function ARIAAgent({ findings, project }: { findings: any[]; project: any
                 />
                 <button
                   onClick={() => handleSend()}
-                  disabled={(!input.trim() && !attachedFile) || isLoading}
+                  disabled={(!input.trim() && attachedFiles.length === 0) || isLoading}
                   className={`absolute right-2 p-2 rounded-lg transition-all ${
-                    (input.trim() || attachedFile) ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400"
+                    (input.trim() || attachedFiles.length > 0) ? "bg-amber-500 text-white shadow-md shadow-amber-500/20" : "bg-zinc-100 dark:bg-zinc-700 text-zinc-400"
                   }`}
                 >
                   <Send size={16} />

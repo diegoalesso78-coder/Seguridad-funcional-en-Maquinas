@@ -25,8 +25,8 @@ function setupSheets() {
   let pSheet = ss.getSheetByName(SHEET_NAME_PROJECTS);
   if (!pSheet) {
     pSheet = ss.insertSheet(SHEET_NAME_PROJECTS);
-    pSheet.appendRow(["Project ID", "Name", "Client", "Author", "Type", "Doc Num", "Status", "Last Sync"]);
-    pSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#f3f4f6");
+    pSheet.appendRow(["Project ID", "Name", "Client", "Author", "Type", "Doc Num", "Status", "Last Sync", "Raw JSON Data"]);
+    pSheet.getRange(1, 1, 1, 9).setFontWeight("bold").setBackground("#f3f4f6");
   }
 
   // Setup Evaluations
@@ -41,8 +41,12 @@ function setupSheets() {
   let fSheet = ss.getSheetByName(SHEET_NAME_FINDINGS);
   if (!fSheet) {
     fSheet = ss.insertSheet(SHEET_NAME_FINDINGS);
-    fSheet.appendRow(["Eval ID", "Finding ID", "Title", "Task Type", "Activity", "Location", "PHR", "Measures Count"]);
-    fSheet.getRange(1, 1, 1, 8).setFontWeight("bold").setBackground("#f3f4f6");
+    fSheet.appendRow([
+      "Eval ID", "Finding ID", "Title", "Task Type", "Activity", "Location", "PHR",
+      "Eliminación", "Sustitución", "Medidas de Ingeniería", "Funciones de Seguridad", 
+      "Admin", "EPP", "Resumen de Mitigación", "Measures Count"
+    ]);
+    fSheet.getRange(1, 1, 1, 15).setFontWeight("bold").setBackground("#f3f4f6");
   }
 }
 
@@ -74,7 +78,7 @@ function updateProjectInSheet(project) {
 
   for (let i = 1; i < pData.length; i++) {
     if (pData[i][0] === project.id) {
-      pSheet.getRange(i + 1, 1, 1, 8).setValues([[
+      pSheet.getRange(i + 1, 1, 1, 9).setValues([[
         project.id, 
         project.name, 
         project.client || "-", 
@@ -82,7 +86,8 @@ function updateProjectInSheet(project) {
         project.type || "-", 
         project.docNum || "-",
         project.status || "Activo",
-        nowStr
+        nowStr,
+        JSON.stringify(project)
       ]]);
       pFound = true;
       break;
@@ -98,7 +103,8 @@ function updateProjectInSheet(project) {
       project.type || "-", 
       project.docNum || "-",
       project.status || "Activo",
-      nowStr
+      nowStr,
+      JSON.stringify(project)
     ]);
   }
   
@@ -150,6 +156,13 @@ function updateFindingsInSheet(fSheet, evalId, findings) {
       f.activity || "-",
       f.location || "-",
       f.phr || "-",
+      f.ctrlElimination || "-",
+      f.ctrlSubstitution || "-",
+      f.ctrlEngineering || "-",
+      f.safetyFunctions || "-",
+      f.ctrlAdmin || "-",
+      f.ctrlPPE || "-",
+      f.mitigation || "-",
       f.measures ? f.measures.length : 0
     ]);
   });

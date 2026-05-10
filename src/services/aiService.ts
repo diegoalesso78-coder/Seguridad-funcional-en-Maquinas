@@ -27,7 +27,7 @@ function getAI() {
   return genAI;
 }
 
-export async function askAria(prompt: string, context?: string, history: { role: string; content: string }[] = [], attachedDoc?: { data: string, mimeType: string, filename: string }) {
+export async function askAria(prompt: string, context?: string, history: { role: string; content: string }[] = [], attachedDocs?: { data: string, mimeType: string, filename: string }[]) {
   try {
     const ai = getAI();
     
@@ -38,14 +38,16 @@ export async function askAria(prompt: string, context?: string, history: { role:
     }));
 
     const newPromptParts: any[] = [];
-    if (attachedDoc) {
-      newPromptParts.push({
-        inlineData: {
-          data: attachedDoc.data,
-          mimeType: attachedDoc.mimeType
-        }
-      });
-      newPromptParts.push({ text: `[Documento adjunto: ${attachedDoc.filename}]\n\n` });
+    if (attachedDocs && attachedDocs.length > 0) {
+      for (const doc of attachedDocs) {
+        newPromptParts.push({
+          inlineData: {
+            data: doc.data,
+            mimeType: doc.mimeType
+          }
+        });
+        newPromptParts.push({ text: `[Documento adjunto: ${doc.filename}]\n\n` });
+      }
     }
     newPromptParts.push({ text: prompt });
 
