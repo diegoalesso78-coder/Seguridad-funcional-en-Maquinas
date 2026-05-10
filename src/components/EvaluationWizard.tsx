@@ -12,7 +12,7 @@ export function EvaluationWizard({ project, evalId, onSave, onBack }: { project:
   const ev0 = project.evaluations.find((e: any) => e.id === evalId);
   const [ev, setEv] = useState(ev0 || { findings: [], checklist: [] });
   // Make sure we merge project and evaluation setup data
-  if (!ev.projectSetup && !ev0) {
+  if (!ev.projectSetup) {
     ev.projectSetup = {
       name: project.name || "",
       client: project.client || "",
@@ -637,17 +637,27 @@ function Step4({ ev, project }: any) {
         
         <div className="space-y-4">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Estadísticas</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-4">Estado de los Hallazgos</div>
+            <div className="grid grid-cols-5 gap-2 items-center">
+              <div className="col-span-1 text-center border-r border-zinc-100 dark:border-zinc-800 pr-2">
                 <div className="text-2xl font-black font-mono">{findings.length}</div>
-                <div className="text-[10px] text-zinc-500 uppercase tracking-tight">Peligros</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-tight">Total</div>
               </div>
-              <div>
-                <div className="text-2xl font-black font-mono text-green-600">
-                  {findings.filter((f: any) => f.status === "IMPLEMENTADO").length}
-                </div>
-                <div className="text-[10px] text-zinc-500 uppercase tracking-tight">Cerrados</div>
+              <div className="col-span-1 text-center">
+                <div className="text-xl font-bold font-mono text-red-500">{findings.filter((f: any) => f.status === "PENDIENTE" || !f.status).length}</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-tight truncate" title="Pendiente">Pend.</div>
+              </div>
+              <div className="col-span-1 text-center">
+                <div className="text-xl font-bold font-mono text-blue-500">{findings.filter((f: any) => f.status === "EN_IMPLEMENTACION").length}</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-tight truncate" title="En Proceso">Proc.</div>
+              </div>
+              <div className="col-span-1 text-center">
+                <div className="text-xl font-bold font-mono text-green-500">{findings.filter((f: any) => f.status === "IMPLEMENTADO").length}</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-tight truncate" title="Listo">Listo</div>
+              </div>
+              <div className="col-span-1 text-center">
+                <div className="text-xl font-bold font-mono text-purple-500">{findings.filter((f: any) => f.status === "VERIFICADO").length}</div>
+                <div className="text-[9px] text-zinc-500 uppercase tracking-tight truncate" title="Verificado">Verif.</div>
               </div>
             </div>
           </div>

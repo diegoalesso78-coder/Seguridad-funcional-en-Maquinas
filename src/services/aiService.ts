@@ -65,8 +65,11 @@ export async function askAria(prompt: string, context?: string, history: { role:
     });
 
     return response.text || "No recibí una respuesta clara.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling ARIA:", error);
-    return "Lo siento, tuve un problema al procesar tu solicitud. Asegúrate de que el documento no sea excesivamente grande, o verifica la conexión.";
+    if (error?.message?.includes("413") || error?.message?.toLowerCase().includes("payload too large")) {
+      return "El tamaño de los documentos adjuntos supera el límite permitido por la conexión. Por favor, selecciona archivos más pequeños o súbelos de a uno.";
+    }
+    return "Lo siento, tuve un problema al procesar tu solicitud. Asegúrate de que los documentos no sean excesivamente grandes o verifica la conexión.";
   }
 }

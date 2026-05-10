@@ -94,14 +94,28 @@ export default function App() {
     if (!project) return;
 
     const version = project.evaluations.length + 1;
+    let prevSetup = undefined;
+    let prevFindings: any[] = [];
+    let prevChecklist = (project.type === "DISEÑO" ? RFQ : NR12).map(i => ({ ...i, status: "", obs: "" }));
+
+    if (project.evaluations.length > 0) {
+      const last = project.evaluations[project.evaluations.length - 1];
+      prevSetup = last.projectSetup;
+      prevFindings = [...(last.findings || [])];
+      if (last.checklist && last.checklist.length > 0) {
+        prevChecklist = [...last.checklist];
+      }
+    }
+
     const newEval = {
       id: uid(),
       version,
       label: version === 1 ? "Evaluación Inicial" : `Re-evaluación ${version - 1}`,
       status: "BORRADOR",
       date: new Date().toISOString(),
-      findings: [],
-      checklist: (project.type === "DISEÑO" ? RFQ : NR12).map(i => ({ ...i, status: "", obs: "" })),
+      findings: prevFindings,
+      checklist: prevChecklist,
+      projectSetup: prevSetup
     };
 
     const updated = { ...project, evaluations: [...project.evaluations, newEval] };
